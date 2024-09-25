@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document Summarizer</title>
+    <style>
+       body {
+            font-family: Arial, sans-serif;
+            background-color: #f9f9f9;
+            color: #333;
+            text-align: center;
+            padding: 20px;
+        }
+
+        h1 {
+            color: #444;
+        }
+
+        .drop-zone {
+            width: 50%;
+            max-width: 400px;
+            height: 150px;
+            border: 2px dashed #cccccc;
+            background-color: #ffffff;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            cursor: pointer;
+            margin: 20px auto;
+            transition: border-color 0.3s;
+        }
+        
+
+        .drop-zone.dragover {
+            border-color: #100101;
+            background-color: #190336;
+        }
+    </style>
+</head>
+
+<body>
+
+    <h1>Upload Your Document for Summarization</h1>
+
+    <!-- Drop Zone for Drag-and-Drop -->
+    <div class="drop-zone" id="drop-zone">
+        Drag & Drop your document here or click to upload
+    </div>
+
+    <!-- Hidden File Input (Fallback for Non-Drag-and-Drop Users) -->
+    <input type="file" id="file-input" hidden>
+
+    <!-- Summary Display -->
+    <div id="summary-section">
+        <h3>Summary</h3>
+        <p id="summary-output"></p>
+    </div>
+
+    <button id="download-txt-btn" onclick=download() style="display:none;">Download as TXT</button>
+
+    <script>
+        const dropZone = document.getElementById('drop-zone');
+        const fileInput = document.getElementById('file-input');
+        const summaryOutput = document.getElementById('summary-output');
+        const downloadTxtBtn = document.getElementById('download-txt-btn');
+
+        // Trigger file input when the drop zone is clicked
+        dropZone.addEventListener('click', () => {
+            fileInput.click();
+        });
+
+        // Handle file drop
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('dragover');
+        });
+
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.classList.remove('dragover');
+        });
+
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('dragover');
+            const file = e.dataTransfer.files[0];
+            handleFileUpload(file);
+        });
+
+        // Handle file selection via the file input (fallback)
+        fileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            handleFileUpload(file);
+        });
+
+        // Handle file upload and send to the backend
+        function handleFileUpload(file) {
+            if (!file) return;
+
+            const formData = new FormData();
+            formData.append('document', file);
+
+            fetch('/summarize', {
+                method: 'POST',
+                body: formData
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.summary) {
+                        summaryOutput.textContent = data.summary;
+                        downloadTxtBtn.style.display = 'inline';
+                    } else {
+                        summaryOutput.textContent = 'No summary generated or file format not supported.';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error uploading the file:', error);
+                    summaryOutput.textContent = 'Error generating summary.';
+                });
+        }
+
+        function download() {
+            let summary = document.getElementById("summary-output").textContent
+            const blob = new Blob([summary], { type: 'text/plain' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = 'summary.txt';
+            link.click();
+        }
+    </script>
+
+</body>
+
+</html>
